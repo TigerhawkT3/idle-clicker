@@ -2,8 +2,10 @@ import tkinter as tk
 from idlelib.ToolTip import ToolTip as Tip
 
 class Gear:
-    def __init__(self, name, cost, quantity=0, per_second=0, limit=0):
+    def __init__(self, name, description, tip, cost, quantity=0, per_second=0, limit=0):
         self.name = name
+        self.description = description
+        self.tip = tip
         self.cost = cost
         self.quantity = quantity
         self.per_second = per_second
@@ -15,24 +17,31 @@ class Clicker:
         self.the_button = tk.Button(parent, text='Click the button!', width=20, height=5, command=self.increment)
         self.current_clicks = 0
         self.gear = {}
-        self.building = {}
-        self.gear['clicker'] = Gear('clicker', 10, limit=100, quantity=1)
-        self.gear['click booster'] = Gear('click booster', 50, limit=5)
-        self.gear['noob clicker'] = Gear('noob clicker', 15, per_second=1)
-        self.gear['gremlin'] = Gear('gremlin', 50, per_second=5)
-        self.purchase_buttons['clicker'] = tk.Button(parent, text='Extra click (%d): 1' % self.gear['clicker'].cost,
-            command=lambda: self.purchase('clicker'))
-        self.purchase_buttons['click booster'] = tk.Button(parent, text='Multiplicative click booster: (%d): 0' % self.gear['click booster'].cost,
-            command=lambda: self.purchase('click booster'))
-        self.purchase_buttons['noob clicker'] = tk.Button(parent, text='Noob at clicking: (%d): 0' % self.gear['noob clicker'].cost,
-            command=lambda: self.purchase('noob clicker'))
-        self.purchase_buttons['gremlin'] = tk.Button(parent, text='A gremlin to click things: (%d): 0' % self.gear['gremlin'].cost,
-            command=lambda: self.purchase('gremlin'))
+        self.gear['clicker'] = Gear('clicker', 'Clicks per clicks: (%d): 1',
+            'Click again whenever you click.', 10, limit=100, quantity=1)
+        self.gear['click booster'] = Gear('click booster', 'Multiplicative click booster: (%d): 1',
+            'Doubles your clicks.', 50, limit=5)
+        self.gear['noob clicker'] = Gear('noob clicker', 'Noob at clicking: (%d): 0',
+            'A noob at clicking, but they care!', 15, per_second=1)
+        self.gear['gremlin'] = Gear('gremlin', 'A gremlin to click things: (%d): 0',
+            'Gremlins enjoy clicking. Really.', 50, per_second=5)
+        self.gear['goblin'] = Gear('goblin', 'A goblin to provide you with clicks: (%d): 0',
+            'Goblins click more than gremlins.', 200, per_second=30)
+        self.gear['inclined plane'] = Gear('inclined plane', 'Roll some clicks your way: (%d): 0',
+            'Observe clicks in slow motion.', 500, per_second=125)
+        self.gear['pulley'] = Gear('pulley', 'Pull some clicks to you: (%d): 0',
+            'Not frictionless.', 2000, per_second=750)
+        self.gear['lever'] = Gear('lever', 'Pry some clicks up: (%d): 0',
+            'Archimedes would be proud.', 10000, per_second=5000)
+        self.gear['wedge'] = Gear('wedge', 'Stuff some extra clicks in there: (%d): 0',
+            'Can I axe you a question?', 100000, per_second=75000)
+        self.gear['elbow grease'] = Gear('elbow grease', 'Click the old-fashioned way: (%d): 0',
+            'Surprisingly easy.', 500000, per_second=500000)
         
-        self.tooltips = {'clicker':Tip(self.purchase_buttons['clicker'], 'Click again whenever you click.'),
-                         'click booster':Tip(self.purchase_buttons['click booster'], 'Doubles your clicks.'),
-                         'noob clicker':Tip(self.purchase_buttons['noob clicker'], 'A noob at clicking, but they care!'),
-                         'gremlin':Tip(self.purchase_buttons['gremlin'], 'Gremlins enjoy clicking. Really.')}
+        for gear in (self.gear.values()):
+            gear.button = tk.Button(parent, text=gear.description % self.gear[gear.name].cost,
+                                            command=lambda x=gear.name: self.purchase(x))
+            gear.tooltip = Tip(gear.button, gear.tip + ' - (%d/s)' % gear.per_second)
         
         self.current_click_label = tk.Label(parent, text='0')
         self.the_button.grid(row=0, column=0)
