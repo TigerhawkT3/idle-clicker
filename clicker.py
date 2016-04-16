@@ -1,5 +1,6 @@
 import tkinter as tk
 from idlelib.ToolTip import ToolTip as Tip
+from tkinter import messagebox
 
 class Gear:
     def __init__(self, name, descriptions, tips, costs, quantity=0, per_second=0, limit=0,
@@ -45,6 +46,8 @@ class Clicker:
         self.tooltips = {}
         self.the_button = tk.Button(parent, text='Click the button! Strength:\n', width=20, height=5, command=self.increment)
         self.current_clicks = 0
+        self.cumulative_clicks = 0
+        self.purchase_direction = 1
         self.gear = {}
         self.gear['clicker'] = Gear('clicker', ['Clicks per click: (%d): 1'],
             ['Click again whenever you click.'], [10])
@@ -137,7 +140,20 @@ class Clicker:
                 column = 0
             gear.button.grid(row=row, column=column)
         
+        self.parent.bind('c', lambda x: messagebox.showinfo(title='Cumulative clicks',
+            message='Cumulative clicks:\n' + self.number_formatter(self.cumulative_clicks)))
+        self.parent.bind('r', self.purchase_toggle)
+        
         self.update()
+    
+    def purchase_toggle(self, event=None):
+        self.purchase_direction *= -1
+        if self.purchase_direction == 1:
+            action = 'purchasing'
+        else:
+            action = 'refunding'
+        messagebox.showinfo(title='Purchase/refund',
+            message='You are now {} when you click gear.'.format(action))
     
     @property
     def click_strength(self):
@@ -179,28 +195,39 @@ class Clicker:
     
     def increment(self):
         self.current_clicks += self.click_strength
-        self.current_click_label.config(text=self.number_formatter(self.current_clicks))
+        self.cumulative_clicks += self.click_strength
+        self.current_click_label.config(text='Current clicks:\n' + self.number_formatter(self.current_clicks))
         
     def purchase(self, gear):
-        if self.current_clicks >= gear.cost:
-            self.current_clicks -= gear.cost
-            gear.quantity += 1
-            self.current_click_label.config(text=self.number_formatter(self.current_clicks))
-            if gear.empowers:
-                gear.empowers.empowered += 1
-            if gear.limit and gear.quantity >= gear.limit:
-                gear.button.config(state=tk.DISABLED,
-                    text=gear.button['text'].split(': ')[0] + ': {} (MAX)'.format(gear.quantity))
-            else:
-                gear.button.config(
-                    text=gear.button['text'].split(': ')[0] + ': ({}): {}'.format(gear.cost, gear.quantity))
+        if self.purchase_direction == 1:
+            if self.current_clicks < gear.cost:
+                return
+            self.current_clicks -= gear.cost * self.purchase_direction
+            gear.quantity += self.purchase_direction
+        else:
+            if not gear.quantity:
+                return
+            gear.quantity += self.purchase_direction
+            self.current_clicks -= gear.cost * self.purchase_direction
+        
+        self.current_click_label.config(text='Current clicks:\n' + self.number_formatter(self.current_clicks))
+        if gear.empowers:
+            gear.empowers.empowered += self.purchase_direction
+        if gear.limit and gear.quantity >= gear.limit:
+            gear.button.config(state=tk.DISABLED,
+                text=gear.button['text'].split(': ')[0] + ': {} (MAX)'.format(gear.quantity))
+        else:
+            gear.button.config(
+                text=gear.button['text'].split(': ')[0] + ': ({}): {}'.format(gear.cost, gear.quantity))
     
     def update(self):
         self.the_button.config(text='Click the button! Strength:\n' + self.number_formatter(self.click_strength))
         per_second = self.per_second
-        self.current_clicks += int(per_second) + self.gear['cursor'].quantity*self.click_strength
-        self.current_click_label.config(text=self.number_formatter(self.current_clicks))
-        self.per_second_label.config(text=self.number_formatter(int(per_second)))
+        additional = int(per_second) + self.gear['cursor'].quantity*self.click_strength
+        self.current_clicks += additional
+        self.cumulative_clicks += additional
+        self.current_click_label.config(text='Current clicks:\n' + self.number_formatter(self.current_clicks))
+        self.per_second_label.config(text='Clicks per second:\n' + self.number_formatter(int(per_second)))
         self.parent.after(1000, self.update)
 
 root = tk.Tk()
