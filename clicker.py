@@ -54,18 +54,18 @@ class Clicker:
         with open('clicker_gear.txt') as f:
             for line in f:
                 d = ast.literal_eval(line)
-                self.gear[d.name] = Gear(**d)
+                self.gear[d['name']] = Gear(**d)
         for gear in self.gear.values():
             if gear.multiplier:
                 gear.multiplier = self.gear[gear.multiplier]
             if gear.power_gear:
-                gear.power_gear = self.gear[power_gear]
+                gear.power_gear = self.gear[gear.power_gear]
             if gear.empowers:
-                gear.empowers = self.gear[empowers]
+                gear.empowers = self.gear[gear.empowers]
             if gear.synergy_unlocked:
-                gear.synergy_unlocked = self.gear[synergy_unlocked]
+                gear.synergy_unlocked = self.gear[gear.synergy_unlocked]
             if gear.synergy_building:
-                gear.synergy_building = self.gear[synergy_building]
+                gear.synergy_building = self.gear[gear.synergy_building]
 
         self.upgrade_frame = tk.Frame(parent)
         self.current_click_label = tk.Label(parent, text='0')
@@ -78,7 +78,7 @@ class Clicker:
         self.upgrade_canvas = tk.Canvas(self.upgrade_frame, yscrollcommand=self.scrollbar.set)
         self.cframe = tk.Frame(self.upgrade_canvas)
         self.cframe.bind("<Configure>", lambda x: self.upgrade_canvas.configure(
-            scrollregion=self.upgrade_canvas.bbox('all'), width=600, height=200))
+            scrollregion=self.upgrade_canvas.bbox('all'), width=700, height=200))
         self.cwindow = self.upgrade_canvas.create_window((0,0), window=self.cframe, anchor='nw')
         self.scrollbar.config(command=self.upgrade_canvas.yview)
         self.upgrade_canvas.grid(row=0, column=0)
@@ -86,9 +86,9 @@ class Clicker:
         self.parent.bind('<MouseWheel>', lambda x: self.upgrade_canvas.yview_scroll(-1*(x.delta//30), 'units'))
 
         for gear in sorted(self.gear.values(), key=lambda x: (x.per_second, x.cost)):
-            gear.button = tk.Button(self.cframe, text=gear.description % gear.cost,
+            gear.button = tk.Button(self.cframe, text=gear.description % self.number_formatter(gear.cost),
                                             command=lambda x=gear: self.purchase(x))
-            gear.tooltip = Tip(gear.button, gear.tip + ' - (%d/s)' % gear.per_second)
+            gear.tooltip = Tip(gear.button, gear.tip + ' - (%s/s)' % self.number_formatter(gear.per_second))
         
         manual_row = -1
         auto_row = -1
