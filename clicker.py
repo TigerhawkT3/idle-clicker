@@ -78,7 +78,7 @@ class Clicker:
         self.upgrade_canvas = tk.Canvas(self.upgrade_frame, yscrollcommand=self.scrollbar.set)
         self.cframe = tk.Frame(self.upgrade_canvas)
         self.cframe.bind("<Configure>", lambda x: self.upgrade_canvas.configure(
-            scrollregion=self.upgrade_canvas.bbox('all'), width=700, height=200))
+            scrollregion=self.upgrade_canvas.bbox('all'), width=750, height=200))
         self.cwindow = self.upgrade_canvas.create_window((0,0), window=self.cframe, anchor='nw')
         self.scrollbar.config(command=self.upgrade_canvas.yview)
         self.upgrade_canvas.grid(row=0, column=0)
@@ -86,9 +86,16 @@ class Clicker:
         self.parent.bind('<MouseWheel>', lambda x: self.upgrade_canvas.yview_scroll(-1*(x.delta//30), 'units'))
 
         for gear in sorted(self.gear.values(), key=lambda x: (x.per_second, x.cost)):
-            gear.button = tk.Button(self.cframe, text=gear.description % self.number_formatter(gear.cost),
-                                            command=lambda x=gear: self.purchase(x))
-            gear.tooltip = Tip(gear.button, gear.tip + ' - (%s/s)' % self.number_formatter(gear.per_second))
+            gear.button = tk.Button(self.cframe, text=gear.description.format(self.number_formatter(gear.cost),
+                                                                              self.number_formatter(gear.quantity)),
+                                    command=lambda x=gear: self.purchase(x))
+            if gear.per_second:
+                format_string = '{} - ({}/s)'
+                per = self.number_formatter(gear.per_second)
+            else:
+                format_string = '{}{}'
+                per = ''
+            gear.tooltip = Tip(gear.button, format_string.format(gear.tip, per))
         
         manual_row = -1
         auto_row = -1
@@ -178,11 +185,12 @@ class Clicker:
             gear.empowers.empowered += self.purchase_direction
         if gear.limit and gear.quantity >= gear.limit:
             gear.button.config(state=tk.DISABLED,
-                text=gear.button['text'].split(': ')[0] + ': {} (MAX)'.format(self.number_formatter(gear.quantity)))
+                text=gear.description.format(self.number_formatter(gear.cost), '(MAX)')
+                )
         else:
             gear.button.config(
-                text=gear.button['text'].split(': ')[0] + ': ({}): {}'.format(self.number_formatter(gear.cost),
-                                                                              self.number_formatter(gear.quantity)))
+                text=gear.description.format(self.number_formatter(gear.cost), self.number_formatter(gear.quantity))
+                )
     
     def update(self):
         self.the_button.config(text='Click the button! Strength:\n' + self.number_formatter(self.click_strength))
