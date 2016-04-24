@@ -178,10 +178,11 @@ class Clicker:
             gear.empowers.empowered += self.purchase_direction
         if gear.limit and gear.quantity >= gear.limit:
             gear.button.config(state=tk.DISABLED,
-                text=gear.button['text'].split(': ')[0] + ': {} (MAX)'.format(gear.quantity))
+                text=gear.button['text'].split(': ')[0] + ': {} (MAX)'.format(self.number_formatter(gear.quantity)))
         else:
             gear.button.config(
-                text=gear.button['text'].split(': ')[0] + ': ({}): {}'.format(gear.cost, gear.quantity))
+                text=gear.button['text'].split(': ')[0] + ': ({}): {}'.format(self.number_formatter(gear.cost),
+                                                                              self.number_formatter(gear.quantity)))
     
     def update(self):
         self.the_button.config(text='Click the button! Strength:\n' + self.number_formatter(self.click_strength))
