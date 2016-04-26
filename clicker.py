@@ -2,11 +2,12 @@ import tkinter as tk
 from idlelib.ToolTip import ToolTip as Tip
 from tkinter import messagebox
 import ast
+import random
 
 class Gear:
     def __init__(self, name, descriptions, tips, costs, quantity=0, per_second=0, limit=0,
                  multiplier=0, synergy_unlocked=None, synergy_building=None,
-                 power_gear=0, empowered=0, empowers=0):
+                 power_gear=0, empowered=0, empowers=0, callback=None):
         self.name = name
         self.descriptions = descriptions
         self.tips = tips
@@ -20,6 +21,7 @@ class Gear:
         self.power_gear = power_gear
         self.empowered = empowered
         self.empowers = empowers
+        self.callback = callback
     
     @property
     def description(self):
@@ -46,10 +48,17 @@ class Clicker:
         self.parent = parent
         self.tooltips = {}
         self.the_button = tk.Button(parent, text='Click the button! Strength:\n', width=20, height=5, command=self.increment)
+        self.golden_button = tk.Button(parent, text='Activate super\nclicking power!', width=20, height=5, command=self.golden)
         self.current_clicks = 0
         self.cumulative_clicks = 0
         self.purchase_direction = 1
+        self.golden_buff_strength = 1 # or 1024
+        self.golden_buff_duration = 16 # or 32
+        self.golden_button_delay_unit = 60 # or 30
+        self.golden_button_duration = 16 # or 32
+        self.golden_button_running = lambda: None
         self.gear = {}
+        self.callbacks = {'golden':self.golden}
         
         with open('clicker_gear.txt') as f:
             for line in f:
@@ -66,6 +75,8 @@ class Clicker:
                 gear.synergy_unlocked = self.gear[gear.synergy_unlocked]
             if gear.synergy_building:
                 gear.synergy_building = self.gear[gear.synergy_building]
+            if gear.callback:
+                gear.callback = self.callbacks[gear.callback]
 
         self.upgrade_frame = tk.Frame(parent)
         self.current_click_label = tk.Label(parent, text='0')
@@ -116,6 +127,27 @@ class Clicker:
         
         self.update()
     
+    def golden(self):
+        self.golden_button.grid_forget()
+        self.golden_buff_strength = 1024
+        self.parent.after_cancel(self.golden_button_running)
+        
+        def reduce_click():
+            self.golden_buff_strength = 1
+        def add_button():
+            self.golden_button.grid(row=1, column=0)
+            self.golden_button_running = self.parent.after(self.golden_button_duration, remove_button)
+            #self.golden_button_running = self.parent.after(1000, remove_button)
+        def remove_button():
+            self.golden_button.grid_forget()
+            self.golden_button_running = self.parent.after(random.randint(3, 5)*self.golden_button_delay_unit*1000, add_button)
+            #self.golden_button_running = self.parent.after(3000, add_button)
+                
+        self.parent.after(self.golden_buff_duration*1000, reduce_click)
+        self.parent.after(random.randint(3, 5)*self.golden_button_delay_unit*1000, add_button)
+        #self.parent.after(5000, reduce_click)
+        #self.parent.after(10000, add_button)
+        
     def purchase_toggle(self, event=None):
         self.purchase_direction *= -1
         if self.purchase_direction == 1:
@@ -133,7 +165,7 @@ class Clicker:
                      sum(building.quantity for building in self.gear.values() if building.per_second) +
                      self.gear['cps to click'].quantity*0.01*self.per_second
                     ) *
-                     2**self.gear['click booster'].quantity
+                     2**self.gear['click booster'].quantity * self.golden_buff_strength
                   )
     
     @property
@@ -183,6 +215,8 @@ class Clicker:
         self.current_click_label.config(text='Current clicks:\n' + self.number_formatter(self.current_clicks))
         if gear.empowers:
             gear.empowers.empowered += self.purchase_direction
+        if gear.callback:
+            gear.callback()
         if gear.limit and gear.quantity >= gear.limit:
             gear.button.config(state=tk.DISABLED,
                 text=gear.description.format(self.number_formatter(gear.cost), '(MAX)')
