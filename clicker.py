@@ -5,13 +5,16 @@ import ast
 import random
 
 class Gear:
-    def __init__(self, name, descriptions, tips, costs, quantity=0, per_second=0, limit=0,
+    def __init__(self, name, descriptions, tips, costs, visibilities,
+                 visible=False, quantity=0, per_second=0, limit=0,
                  multiplier=0, synergy_unlocked=None, synergy_building=None,
                  power_gear=0, empowered=0, empowers=0, callback=None):
         self.name = name
         self.descriptions = descriptions
         self.tips = tips
         self.costs = costs
+        self.visibilities = visibilities
+        self.visible = visible
         self.quantity = quantity
         self.per_second = per_second
         self.limit = limit
@@ -78,6 +81,8 @@ class Clicker:
             if gear.callback:
                 gear.callback = self.callbacks[gear.callback]
 
+        canvas_width=750
+        canvas_height=200
         self.upgrade_frame = tk.Frame(parent)
         self.current_click_label = tk.Label(parent, text='0')
         self.the_button.grid(row=0, column=0)
@@ -86,10 +91,10 @@ class Clicker:
         self.per_second_label.grid(row=0, column=2)
         self.upgrade_frame.grid(row=1, column=1, columnspan=2)
         self.scrollbar = tk.Scrollbar(self.upgrade_frame, orient=tk.VERTICAL)
-        self.upgrade_canvas = tk.Canvas(self.upgrade_frame, yscrollcommand=self.scrollbar.set)
+        self.upgrade_canvas = tk.Canvas(self.upgrade_frame, width=canvas_width, height=canvas_height, yscrollcommand=self.scrollbar.set)
         self.cframe = tk.Frame(self.upgrade_canvas)
         self.cframe.bind("<Configure>", lambda x: self.upgrade_canvas.configure(
-            scrollregion=self.upgrade_canvas.bbox('all'), width=750, height=200))
+            scrollregion=self.upgrade_canvas.bbox('all'), width=canvas_width, height=canvas_height))
         self.cwindow = self.upgrade_canvas.create_window((0,0), window=self.cframe, anchor='nw')
         self.scrollbar.config(command=self.upgrade_canvas.yview)
         self.upgrade_canvas.grid(row=0, column=0)
@@ -108,18 +113,8 @@ class Clicker:
                 per = ''
             gear.tooltip = Tip(gear.button, format_string.format(gear.tip, per))
         
-        manual_row = -1
-        auto_row = -1
-        for gear in sorted(self.gear.values(), key=lambda x: x.cost):
-            if gear.per_second:
-                manual_row += 1
-                row = manual_row
-                column = 1
-            else:
-                auto_row += 1
-                row = auto_row
-                column = 0
-            gear.button.grid(row=row, column=column)
+        self.manual_row = -1
+        self.auto_row = -1
         
         self.parent.bind('c', lambda x: messagebox.showinfo(title='Cumulative clicks',
             message='Cumulative clicks:\n' + self.number_formatter(self.cumulative_clicks)))
@@ -232,6 +227,23 @@ class Clicker:
         additional = int(per_second) + self.gear['cursor'].quantity*self.click_strength
         self.current_clicks += additional
         self.cumulative_clicks += additional
+        
+        for gear in sorted(self.gear.values(), key=lambda x: x.cost):
+            if gear.visible:
+                continue
+            if gear.quantity or gear.visibilities[gear.quantity] > self.cumulative_clicks:
+                break
+            if gear.per_second:
+                self.manual_row += 1
+                row = self.manual_row
+                column = 1
+            else:
+                self.auto_row += 1
+                row = self.auto_row
+                column = 0
+            gear.visible = True
+            gear.button.grid(row=row, column=column)
+        
         self.current_click_label.config(text='Current clicks:\n' + self.number_formatter(self.current_clicks))
         self.per_second_label.config(text='Clicks per second:\n' + self.number_formatter(int(per_second)))
         self.parent.after(1000, self.update)
