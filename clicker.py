@@ -81,7 +81,7 @@ class Clicker:
             if gear.callback:
                 gear.callback = self.callbacks[gear.callback]
 
-        canvas_width=750
+        canvas_width=400
         canvas_height=200
         self.upgrade_frame = tk.Frame(parent)
         self.current_click_label = tk.Label(parent, text='0')
