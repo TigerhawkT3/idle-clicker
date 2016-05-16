@@ -81,7 +81,7 @@ class Clicker:
             if gear.callback:
                 gear.callback = self.callbacks[gear.callback]
 
-        canvas_width=400
+        canvas_width=604
         canvas_height=200
         self.upgrade_frame = tk.Frame(parent)
         self.current_click_label = tk.Label(parent, text='0')
@@ -102,7 +102,7 @@ class Clicker:
         self.parent.bind('<MouseWheel>', lambda x: self.upgrade_canvas.yview_scroll(-1*(x.delta//30), 'units'))
 
         for gear in sorted(self.gear.values(), key=lambda x: (x.per_second, x.cost)):
-            gear.button = tk.Button(self.cframe, text=gear.description.format(self.number_formatter(gear.cost),
+            gear.button = tk.Button(self.cframe, width=42, text=gear.description.format(self.number_formatter(gear.cost),
                                                                               self.number_formatter(gear.quantity)),
                                     command=lambda x=gear: self.purchase(x))
             if gear.per_second:
