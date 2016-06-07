@@ -8,7 +8,8 @@ class Gear:
     def __init__(self, name, descriptions, tips, costs, visibilities,
                  visible=False, quantity=0, per_second=0, limit=0,
                  multiplier=0, synergy_unlocked=None, synergy_building=None,
-                 power_gear=0, empowered=0, empowers=0, callback=None):
+                 power_gear=0, empowered=0, empowers=0, callback=None,
+                 achieve_names=None, achieve_built=None, achieve_production=None):
         self.name = name
         self.descriptions = descriptions
         self.tips = tips
@@ -25,6 +26,9 @@ class Gear:
         self.empowered = empowered
         self.empowers = empowers
         self.callback = callback
+        self.achieve_built = achieve_built
+        self.achieve_production = achieve_production
+        self.achieve_names = achieve_names
     
     @property
     def description(self):
@@ -45,6 +49,14 @@ class Gear:
                 return self.costs[self.quantity]
             return self.costs[-1]
         return int(self.costs[0] * 1.15**self.quantity)
+    
+    def calculated_per_second(self, base):
+        temp = 0
+        if self.synergy_unlocked and self.synergy_unlocked.quantity:
+            temp += self.quantity * self.synergy_building.quantity
+        if self.power_gear and self.quantity:
+            temp += self.power_gear.quantity * self.empowers.quantity
+        return temp * base * 0.05
         
 class Clicker:
     def __init__(self, parent):
@@ -61,6 +73,7 @@ class Clicker:
         self.golden_button_duration = 16 # or 32
         self.golden_button_running = lambda: None
         self.gear = {}
+        self.achievements = set()
         self.callbacks = {'golden':self.golden}
         
         with open('clicker_gear.txt') as f:
@@ -164,17 +177,19 @@ class Clicker:
                   )
     
     @property
-    def per_second(self):
-        per_second = base_per_second = sum(gear.per_second*gear.quantity*(
+    def base_per_second(self):
+        return sum(gear.per_second*gear.quantity*(
             gear.multiplier and 2**gear.multiplier.quantity or 1)*(
             2**gear.empowered
-            ) for gear in self.gear.values())
+            ) for gear in self.gear.values()
+            ) * 1.01**self.gear['cps multiplier'].quantity + per_second
+    
+    @property
+    def per_second(self):
+        per_second = base = self.base_per_second
         for gear in self.gear.values():
-            if gear.synergy_unlocked and gear.synergy_unlocked.quantity:
-                per_second += gear.quantity * gear.synergy_building.quantity * 0.05 * base_per_second
-            if gear.power_gear and gear.quantity:
-                per_second += gear.power_gear.quantity * gear.empowers.quantity * base_per_second * 0.05
-        return per_second * 1.01**self.gear['cps multiplier'].quantity
+            per_second += gear.per_second(base)
+        return base + per_second
     
     def number_formatter(self, number):
         if number < 10**15:
@@ -221,7 +236,21 @@ class Clicker:
                 text=gear.description.format(self.number_formatter(gear.cost), self.number_formatter(gear.quantity))
                 )
     
+    def check_achievements(self):
+        '''
+        Checks achievements and adds completed ones to the set. Incomplete.
+        '''
+        for gear in self.gear.values():
+            if gear.achieve_names:
+                for name, value in gear.achieve_built:
+                    if gear.quantity > value:
+                        self.achievements.add(name)
+                for name, value in gear.achieve_production:
+                    pass # implement this
+                        
+    
     def update(self):
+        #self.check_achievements()
         self.the_button.config(text='Click the button! Strength:\n' + self.number_formatter(self.click_strength))
         per_second = self.per_second
         additional = int(per_second) + self.gear['cursor'].quantity*self.click_strength
